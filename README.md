@@ -68,32 +68,49 @@ Base URL: `http://localhost:3000/api/v1`
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `JWT_SECRET` | JWT signing key | `default-secret` |
-| `SSO_URL` | SSO service URL | `http://localhost:3001` |
-| `BANKING_URL` | Banking service URL | `http://localhost:3002` |
-| `DATABASE_HOST` | PostgreSQL host | `localhost` |
-| `DATABASE_PORT` | PostgreSQL port | `5432` |
-| `DATABASE_USERNAME` | DB username | `postgres` |
-| `DATABASE_PASSWORD` | DB password | `postgres` |
-| `DATABASE_NAME` | DB name | `sso_db` / `banking_db` |
-| `WEBHOOK_URL` | Webhook notification URL | - |
+All secrets are managed via `.env` file (see `.env.example`). The `.env` file is excluded from version control via `.gitignore`.
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `JWT_SECRET` | JWT signing key | **Yes** (app fails to start without it) |
+| `SSO_URL` | SSO service URL | No (default: `http://localhost:3001`) |
+| `BANKING_URL` | Banking service URL | No (default: `http://localhost:3002`) |
+| `DATABASE_HOST` | PostgreSQL host | No (default: `localhost`) |
+| `DATABASE_PORT` | PostgreSQL port | No (default: `5432`) |
+| `DATABASE_USERNAME` | DB username | No (default: `postgres`) |
+| `DATABASE_PASSWORD` | DB password | No (default: `postgres`) |
+| `DATABASE_NAME` | DB name | No (default: `sso` / `banking`) |
+| `SSO_DB_USER` | SSO PostgreSQL user | For Docker Compose |
+| `SSO_DB_PASSWORD` | SSO PostgreSQL password | For Docker Compose |
+| `SSO_DB_NAME` | SSO database name | For Docker Compose |
+| `BANKING_DB_USER` | Banking PostgreSQL user | For Docker Compose |
+| `BANKING_DB_PASSWORD` | Banking PostgreSQL password | For Docker Compose |
+| `BANKING_DB_NAME` | Banking database name | For Docker Compose |
+| `WEBHOOK_URL` | Webhook notification URL | No (skipped if not set) |
 
 ## Security
 
-- **Rate limiting:** 10 requests per minute per IP
-- **JWT Bearer token** authentication
-- **Password hashing** with bcrypt
+- **Rate limiting:** 10 requests per minute per IP (`@nestjs/throttler`)
+- **JWT Bearer token** authentication with fail-fast validation
+- **Password hashing** with bcrypt (salt rounds: 10)
+- **Input validation:** UUID validation on path params, DTO validation on request bodies
+- **CORS** enabled on gateway
+- **Non-root containers:** Docker images run as `node` user
+- **No hardcoded secrets:** All credentials externalized to environment variables
+
+## Deployment
+
+> **URL:** _To be added after deployment_
 
 ## Project Structure
 
 ```
 tecopos-mvp/
 ├── apps/
-│   ├── gateway/     (port 3000)
-│   ├── sso/         (port 3001)
-│   └── banking/     (port 3002)
+│   ├── gateway/     (port 3000) - API Gateway with rate limiting
+│   ├── sso/         (port 3001) - Authentication (JWT + bcrypt)
+│   └── banking/     (port 3002) - Accounts & operations + webhooks
 ├── docker-compose.yml
+├── .env.example
 └── nest-cli.json
 ```
