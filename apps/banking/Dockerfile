@@ -16,6 +16,8 @@ COPY --from=builder /app/dist/apps/banking ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
+USER node
+
 EXPOSE 3002
 
 CMD ["node", "dist/main.js"]
