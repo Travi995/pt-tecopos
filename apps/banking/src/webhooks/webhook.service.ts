@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { Operation } from '../operations/entity/operation.entity';
 
@@ -7,10 +8,13 @@ import { Operation } from '../operations/entity/operation.entity';
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async notify(operation: Operation): Promise<void> {
-    const webhookUrl = process.env.WEBHOOK_URL;
+    const webhookUrl = this.configService.get<string>('WEBHOOK_URL');
     if (!webhookUrl) {
       this.logger.warn('WEBHOOK_URL not configured, skipping notification');
       return;
