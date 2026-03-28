@@ -12,5 +12,6 @@ dist/
 *.log
 coverage/
 .DS_Store
+data/
 
 !eslint.config.mjs

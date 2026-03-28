@@ -10,7 +10,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_sso_data:/var/lib/postgresql/data
+      - ./data/postgres-sso:/var/lib/postgresql/data
 
   postgres-banking:
     image: postgres:16-alpine
@@ -21,7 +21,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - postgres_banking_data:/var/lib/postgresql/data
+      - ./data/postgres-banking:/var/lib/postgresql/data
 
   sso:
     build:
@@ -68,7 +68,3 @@ services:
       SSO_URL: http://sso:3001
       BANKING_URL: http://banking:3002
       JWT_SECRET: ${JWT_SECRET}
-
-volumes:
-  postgres_sso_data:
-  postgres_banking_data:
