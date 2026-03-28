@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Operation } from './entity/operation.entity';
+import { Operation, OperationType } from './entity/operation.entity';
 import { CreateOperationDto } from './dto/create-operation.dto';
 import { AccountsService } from '../accounts/accounts.service';
 import { WebhookService } from '../webhooks/webhook.service';
@@ -21,12 +21,25 @@ export class OperationsService {
   }
 
   async create(accountId: string, dto: CreateOperationDto): Promise<Operation> {
-    await this.accountsService.findOne(accountId);
+    const account = await this.accountsService.findOne(accountId);
+    const balance = Number(account.balance);
+    const amount = Number(dto.amount);
+
+    if (dto.type === OperationType.WITHDRAWAL || dto.type === OperationType.TRANSFER) {
+      if (balance < amount) {
+        throw new BadRequestException('Insufficient balance');
+      }
+      account.balance = balance - amount;
+    } else if (dto.type === OperationType.DEPOSIT) {
+      account.balance = balance + amount;
+    }
+
     const operation = this.operationRepository.create({
       ...dto,
       accountId,
     });
     const saved = await this.operationRepository.save(operation);
+    await this.accountsService.save(account);
     await this.webhookService.notify(saved);
     return saved;
   }

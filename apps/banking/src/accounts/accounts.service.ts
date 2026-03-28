@@ -21,4 +21,8 @@ export class AccountsService {
     }
     return account;
   }
+
+  save(account: Account): Promise<Account> {
+    return this.accountRepository.save(account);
+  }
 }
