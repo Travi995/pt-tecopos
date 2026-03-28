@@ -66,7 +66,7 @@ export class BankingProxyController {
     return this.proxyService.forwardToBanking(
       'POST',
       `/accounts/${id}/operations`,
-      body,
+      body as unknown as Record<string, unknown>,
       { authorization: req.headers.authorization },
     );
   }
