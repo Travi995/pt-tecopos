@@ -4,9 +4,9 @@ services:
   postgres-sso:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: sso_db
-      POSTGRES_USER: sso_user
-      POSTGRES_PASSWORD: sso_pass
+      POSTGRES_DB: ${SSO_DB_NAME}
+      POSTGRES_USER: ${SSO_DB_USER}
+      POSTGRES_PASSWORD: ${SSO_DB_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
@@ -15,9 +15,9 @@ services:
   postgres-banking:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: banking_db
-      POSTGRES_USER: banking_user
-      POSTGRES_PASSWORD: banking_pass
+      POSTGRES_DB: ${BANKING_DB_NAME}
+      POSTGRES_USER: ${BANKING_DB_USER}
+      POSTGRES_PASSWORD: ${BANKING_DB_PASSWORD}
     ports:
       - "5434:5432"
     volumes:
@@ -34,10 +34,10 @@ services:
     environment:
       DATABASE_HOST: postgres-sso
       DATABASE_PORT: 5432
-      DATABASE_USERNAME: sso_user
-      DATABASE_PASSWORD: sso_pass
-      DATABASE_NAME: sso_db
-      JWT_SECRET: tecopos-jwt-secret-key-2024
+      DATABASE_USERNAME: ${SSO_DB_USER}
+      DATABASE_PASSWORD: ${SSO_DB_PASSWORD}
+      DATABASE_NAME: ${SSO_DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
 
   banking:
     build:
@@ -50,10 +50,10 @@ services:
     environment:
       DATABASE_HOST: postgres-banking
       DATABASE_PORT: 5432
-      DATABASE_USERNAME: banking_user
-      DATABASE_PASSWORD: banking_pass
-      DATABASE_NAME: banking_db
-      WEBHOOK_URL: http://example.com/webhook
+      DATABASE_USERNAME: ${BANKING_DB_USER}
+      DATABASE_PASSWORD: ${BANKING_DB_PASSWORD}
+      DATABASE_NAME: ${BANKING_DB_NAME}
+      WEBHOOK_URL: ${WEBHOOK_URL}
 
   gateway:
     build:
@@ -67,7 +67,7 @@ services:
     environment:
       SSO_URL: http://sso:3001
       BANKING_URL: http://banking:3002
-      JWT_SECRET: tecopos-jwt-secret-key-2024
+      JWT_SECRET: ${JWT_SECRET}
 
 volumes:
   postgres_sso_data:
