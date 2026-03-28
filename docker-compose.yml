@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres-sso:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sso_db
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD: sso_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_sso_data:/var/lib/postgresql/data
+
+  postgres-banking:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: banking_user
+      POSTGRES_PASSWORD: banking_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_banking_data:/var/lib/postgresql/data
+
+  sso:
+    build:
+      context: .
+      dockerfile: apps/sso/Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-sso
+    environment:
+      DATABASE_HOST: postgres-sso
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: sso_user
+      DATABASE_PASSWORD: sso_pass
+      DATABASE_NAME: sso_db
+      JWT_SECRET: tecopos-jwt-secret-key-2024
+
+  banking:
+    build:
+      context: .
+      dockerfile: apps/banking/Dockerfile
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres-banking
+    environment:
+      DATABASE_HOST: postgres-banking
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: banking_user
+      DATABASE_PASSWORD: banking_pass
+      DATABASE_NAME: banking_db
+      WEBHOOK_URL: http://example.com/webhook
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - sso
+      - banking
+    environment:
+      SSO_URL: http://sso:3001
+      BANKING_URL: http://banking:3002
+      JWT_SECRET: tecopos-jwt-secret-key-2024
+
+volumes:
+  postgres_sso_data:
+  postgres_banking_data:
