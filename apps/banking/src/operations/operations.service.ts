@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Operation } from './operation.entity';
+import { Operation } from './entity/operation.entity';
 import { CreateOperationDto } from './dto/create-operation.dto';
 import { AccountsService } from '../accounts/accounts.service';
 import { WebhookService } from '../webhooks/webhook.service';

@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Operation } from '../operations/operation.entity';
+import { Operation } from '../../operations/entity/operation.entity';
 
 @Entity('accounts')
 export class Account {

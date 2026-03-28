@@ -2,7 +2,7 @@ import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { OperationsService } from './operations.service';
 import { CreateOperationDto } from './dto/create-operation.dto';
-import { Operation } from './operation.entity';
+import { Operation } from './entity/operation.entity';
 
 @ApiTags('operations')
 @Controller('accounts/:accountId/operations')

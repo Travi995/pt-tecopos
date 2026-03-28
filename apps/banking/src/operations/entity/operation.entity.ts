@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Account } from '../accounts/account.entity';
+import { Account } from '../../accounts/entity/account.entity';
 
 export enum OperationType {
   DEPOSIT = 'DEPOSIT',

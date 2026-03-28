@@ -1,8 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Account } from '../accounts/account.entity';
-import { Operation, OperationType } from '../operations/operation.entity';
+import { Account } from '../accounts/entity/account.entity';
+import { Operation, OperationType } from '../operations/entity/operation.entity';
 
 @Injectable()
 export class SeedService implements OnModuleInit {

@@ -1,6 +1,6 @@
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OperationType } from '../operation.entity';
+import { OperationType } from '../entity/operation.entity';
 
 export class CreateOperationDto {
   @ApiProperty({ enum: OperationType })

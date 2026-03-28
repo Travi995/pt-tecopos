@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
-import { Account } from './account.entity';
+import { Account } from './entity/account.entity';
 
 @ApiTags('accounts')
 @Controller('accounts')
