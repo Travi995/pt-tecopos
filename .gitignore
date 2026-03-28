@@ -1,8 +1,16 @@
 /node_modules
+node_modules/
 /dist
+dist/
 /.idea
 /.vscode
 *.js.map
 *.d.ts
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.DS_Store
 
 !eslint.config.mjs
