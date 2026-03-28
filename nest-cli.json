@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/gateway/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/gateway/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/gateway",
+  "projects": {
+    "gateway": {
+      "type": "application",
+      "root": "apps/gateway",
+      "entryFile": "main",
+      "sourceRoot": "apps/gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/gateway/tsconfig.app.json"
+      }
+    },
+    "sso": {
+      "type": "application",
+      "root": "apps/sso",
+      "entryFile": "main",
+      "sourceRoot": "apps/sso/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sso/tsconfig.app.json"
+      }
+    },
+    "banking": {
+      "type": "application",
+      "root": "apps/banking",
+      "entryFile": "main",
+      "sourceRoot": "apps/banking/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/banking/tsconfig.app.json"
+      }
+    }
+  }
+}
