@@ -9,6 +9,10 @@ import {
 import { ProxyService } from './proxy.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
+interface ProxyRequest {
+  headers: { authorization?: string };
+}
+
 @ApiTags('accounts')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -19,7 +23,7 @@ export class BankingProxyController {
   @Get()
   @ApiOperation({ summary: 'List all bank accounts' })
   @ApiResponse({ status: 200, description: 'List of accounts' })
-  async findAll(@Req() req: any) {
+  async findAll(@Req() req: ProxyRequest) {
     return this.proxyService.forwardToBanking('GET', '/accounts', undefined, {
       authorization: req.headers.authorization,
     });
@@ -29,7 +33,7 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'Get account by ID' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account details' })
-  async findOne(@Param('id') id: string, @Req() req: any) {
+  async findOne(@Param('id') id: string, @Req() req: ProxyRequest) {
     return this.proxyService.forwardToBanking('GET', `/accounts/${id}`, undefined, {
       authorization: req.headers.authorization,
     });
@@ -39,7 +43,7 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'List operations for an account' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'List of operations' })
-  async findOperations(@Param('id') id: string, @Req() req: any) {
+  async findOperations(@Param('id') id: string, @Req() req: ProxyRequest) {
     return this.proxyService.forwardToBanking(
       'GET',
       `/accounts/${id}/operations`,
@@ -54,8 +58,8 @@ export class BankingProxyController {
   @ApiResponse({ status: 201, description: 'Operation created' })
   async createOperation(
     @Param('id') id: string,
-    @Body() body: any,
-    @Req() req: any,
+    @Body() body: Record<string, unknown>,
+    @Req() req: ProxyRequest,
   ) {
     return this.proxyService.forwardToBanking(
       'POST',

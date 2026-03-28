@@ -1,10 +1,16 @@
-import { Injectable, HttpException } from '@nestjs/common';
+import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { AxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
+
+interface ProxyHeaders {
+  authorization?: string;
+}
 
 @Injectable()
 export class ProxyService {
+  private readonly logger = new Logger(ProxyService.name);
   private ssoUrl: string;
   private bankingUrl: string;
 
@@ -16,7 +22,7 @@ export class ProxyService {
     this.bankingUrl = this.configService.get<string>('BANKING_URL', 'http://localhost:3002');
   }
 
-  async forwardToSso(method: string, path: string, data?: any, headers?: any) {
+  async forwardToSso(method: string, path: string, data?: Record<string, unknown>, headers?: ProxyHeaders) {
     try {
       const response = await firstValueFrom(
         this.httpService.request({
@@ -28,14 +34,16 @@ export class ProxyService {
       );
       return response.data;
     } catch (error) {
-      if (error.response) {
-        throw new HttpException(error.response.data, error.response.status);
+      const axiosError = error as AxiosError;
+      if (axiosError.response) {
+        throw new HttpException(axiosError.response.data as Record<string, unknown>, axiosError.response.status);
       }
+      this.logger.error(`Failed to forward request to SSO: ${axiosError.message}`);
       throw error;
     }
   }
 
-  async forwardToBanking(method: string, path: string, data?: any, headers?: any) {
+  async forwardToBanking(method: string, path: string, data?: Record<string, unknown>, headers?: ProxyHeaders) {
     try {
       const response = await firstValueFrom(
         this.httpService.request({
@@ -47,9 +55,11 @@ export class ProxyService {
       );
       return response.data;
     } catch (error) {
-      if (error.response) {
-        throw new HttpException(error.response.data, error.response.status);
+      const axiosError = error as AxiosError;
+      if (axiosError.response) {
+        throw new HttpException(axiosError.response.data as Record<string, unknown>, axiosError.response.status);
       }
+      this.logger.error(`Failed to forward request to Banking: ${axiosError.message}`);
       throw error;
     }
   }

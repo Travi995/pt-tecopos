@@ -5,6 +5,10 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
+interface AuthenticatedRequest {
+  user: { id: string; email: string };
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -32,7 +36,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.id);
   }
 }
