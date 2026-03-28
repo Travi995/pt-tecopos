@@ -19,7 +19,7 @@ import { SeedModule } from './seed/seed.module';
         password: configService.get<string>('DATABASE_PASSWORD', 'postgres'),
         database: configService.get<string>('DATABASE_NAME', 'banking'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: configService.get('NODE_ENV') !== 'production',
       }),
     }),
     AccountsModule,

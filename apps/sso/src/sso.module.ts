@@ -17,7 +17,7 @@ import { User } from './users/entity/user.entity';
         password: configService.get<string>('DATABASE_PASSWORD', 'postgres'),
         database: configService.get<string>('DATABASE_NAME', 'sso'),
         entities: [User],
-        synchronize: true,
+        synchronize: configService.get('NODE_ENV') !== 'production',
       }),
     }),
     AuthModule,
