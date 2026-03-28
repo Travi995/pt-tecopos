@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Req, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { ProxyService } from './proxy.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { CreateOperationDto } from './dto/create-operation.dto';
 
 interface ProxyRequest {
   headers: { authorization?: string };
@@ -33,7 +34,7 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'Get account by ID' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account details' })
-  async findOne(@Param('id') id: string, @Req() req: ProxyRequest) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: ProxyRequest) {
     return this.proxyService.forwardToBanking('GET', `/accounts/${id}`, undefined, {
       authorization: req.headers.authorization,
     });
@@ -43,7 +44,7 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'List operations for an account' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'List of operations' })
-  async findOperations(@Param('id') id: string, @Req() req: ProxyRequest) {
+  async findOperations(@Param('id', ParseUUIDPipe) id: string, @Req() req: ProxyRequest) {
     return this.proxyService.forwardToBanking(
       'GET',
       `/accounts/${id}/operations`,
@@ -56,9 +57,10 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'Create a new operation' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 201, description: 'Operation created' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
   async createOperation(
-    @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CreateOperationDto,
     @Req() req: ProxyRequest,
   ) {
     return this.proxyService.forwardToBanking(
