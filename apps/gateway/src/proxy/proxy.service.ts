@@ -21,7 +21,7 @@ export class ProxyService {
       const response = await firstValueFrom(
         this.httpService.request({
           method,
-          url: `${this.ssoUrl}${path}`,
+          url: `${this.ssoUrl}/api/v1${path}`,
           data,
           headers: headers ? { authorization: headers.authorization } : undefined,
         }),
@@ -40,7 +40,7 @@ export class ProxyService {
       const response = await firstValueFrom(
         this.httpService.request({
           method,
-          url: `${this.bankingUrl}${path}`,
+          url: `${this.bankingUrl}/api/v1${path}`,
           data,
           headers: headers ? { authorization: headers.authorization } : undefined,
         }),

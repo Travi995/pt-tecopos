@@ -46,19 +46,25 @@ npm run start:dev banking
 
 ## API Endpoints
 
+Base URL: `http://localhost:3000/api/v1`
+
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| POST | `/auth/register` | Register user | No |
-| POST | `/auth/login` | Login, get JWT | No |
-| GET | `/auth/profile` | Get profile | JWT |
-| GET | `/accounts` | List accounts | JWT |
-| GET | `/accounts/:id` | Get account | JWT |
-| GET | `/accounts/:id/operations` | List operations | JWT |
-| POST | `/accounts/:id/operations` | Create operation | JWT |
+| POST | `/api/v1/auth/register` | Register user | No |
+| POST | `/api/v1/auth/login` | Login, get JWT | No |
+| GET | `/api/v1/auth/profile` | Get profile | JWT |
+| GET | `/api/v1/accounts` | List accounts | JWT |
+| GET | `/api/v1/accounts/:id` | Get account | JWT |
+| GET | `/api/v1/accounts/:id/operations` | List operations | JWT |
+| POST | `/api/v1/accounts/:id/operations` | Create operation | JWT |
 
 ## Swagger Documentation
 
-Available at [http://localhost:3000/api](http://localhost:3000/api) (Gateway)
+| Service | URL |
+|---------|-----|
+| Gateway | [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs) |
+| SSO | [http://localhost:3001/api/v1/docs](http://localhost:3001/api/v1/docs) |
+| Banking | [http://localhost:3002/api/v1/docs](http://localhost:3002/api/v1/docs) |
 
 ## Environment Variables
 
