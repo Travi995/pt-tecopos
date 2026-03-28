@@ -1,0 +1,14 @@
+{
+  "name": "pt-tecopos",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PT TECOPOS - Monorepo",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "build": "echo 'build'",
+    "start": "echo 'start'"
+  }
+}
