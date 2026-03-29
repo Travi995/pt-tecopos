@@ -13,9 +13,9 @@ export class BankingKafkaController {
   ) {}
 
   @MessagePattern('banking.accounts.findAll')
-  async handleFindAll() {
+  async handleFindAll(@Payload() data: { userId?: string }) {
     try {
-      return await this.accountsService.findAll();
+      return await this.accountsService.findAll(data.userId);
     } catch (error) {
       this.logger.error(`FindAll error: ${error.message}`);
       return { error: error.message, statusCode: error.status || 500 };
@@ -23,9 +23,9 @@ export class BankingKafkaController {
   }
 
   @MessagePattern('banking.accounts.findOne')
-  async handleFindOne(@Payload() data: { id: string }) {
+  async handleFindOne(@Payload() data: { id: string; userId?: string }) {
     try {
-      return await this.accountsService.findOne(data.id);
+      return await this.accountsService.findOne(data.id, data.userId);
     } catch (error) {
       this.logger.error(`FindOne error: ${error.message}`);
       return { error: error.message, statusCode: error.status || 500 };
@@ -33,8 +33,9 @@ export class BankingKafkaController {
   }
 
   @MessagePattern('banking.operations.findByAccount')
-  async handleFindOperations(@Payload() data: { accountId: string }) {
+  async handleFindOperations(@Payload() data: { accountId: string; userId?: string }) {
     try {
+      await this.accountsService.findOne(data.accountId, data.userId);
       return await this.operationsService.findByAccount(data.accountId);
     } catch (error) {
       this.logger.error(`FindOperations error: ${error.message}`);
@@ -50,6 +51,7 @@ export class BankingKafkaController {
       type: string;
       amount: number;
       description?: string;
+      userId?: string;
     },
   ) {
     try {
@@ -57,7 +59,7 @@ export class BankingKafkaController {
         type: data.type as any,
         amount: data.amount,
         description: data.description,
-      });
+      }, data.userId);
     } catch (error) {
       this.logger.error(`CreateOperation error: ${error.message}`);
       return { error: error.message, statusCode: error.status || 500 };

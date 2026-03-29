@@ -21,6 +21,7 @@ import { CreateOperationDto } from './dto/create-operation.dto';
 
 interface ProxyRequest {
   headers: { authorization?: string };
+  user: { sub: string; email: string };
 }
 
 @ApiTags('accounts')
@@ -35,7 +36,7 @@ export class BankingProxyController {
   @ApiResponse({ status: 200, description: 'List of accounts' })
   async findAll(@Req() req: ProxyRequest) {
     return this.proxyService.sendToBanking('banking.accounts.findAll', {
-      authorization: req.headers.authorization,
+      userId: req.user.sub,
     });
   }
 
@@ -49,7 +50,7 @@ export class BankingProxyController {
   ) {
     return this.proxyService.sendToBanking('banking.accounts.findOne', {
       id,
-      authorization: req.headers.authorization,
+      userId: req.user.sub,
     });
   }
 
@@ -65,7 +66,7 @@ export class BankingProxyController {
       'banking.operations.findByAccount',
       {
         accountId: id,
-        authorization: req.headers.authorization,
+        userId: req.user.sub,
       },
     );
   }
@@ -83,7 +84,7 @@ export class BankingProxyController {
     return this.proxyService.sendToBanking('banking.operations.create', {
       accountId: id,
       ...(body as unknown as Record<string, unknown>),
-      authorization: req.headers.authorization,
+      userId: req.user.sub,
     });
   }
 }

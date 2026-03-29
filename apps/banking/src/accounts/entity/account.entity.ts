@@ -6,6 +6,9 @@ export class Account {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ nullable: true })
+  userId: string;
+
   @Column({ unique: true })
   accountNumber: string;
 

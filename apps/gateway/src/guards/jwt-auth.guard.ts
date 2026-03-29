@@ -25,7 +25,8 @@ export class JwtAuthGuard implements CanActivate {
       if (!secret) {
         throw new UnauthorizedException('JWT_SECRET is not configured');
       }
-      jwt.verify(token, secret);
+      const payload = jwt.verify(token, secret) as jwt.JwtPayload;
+      request.user = { sub: payload.sub as string, email: payload.email as string };
       return true;
     } catch {
       throw new UnauthorizedException();
