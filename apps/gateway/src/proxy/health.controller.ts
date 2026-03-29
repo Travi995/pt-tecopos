@@ -8,19 +8,21 @@ export class HealthController {
   constructor(private readonly proxyService: ProxyService) {}
 
   @Get('health')
-  @ApiOperation({ summary: 'Estado del sistema y circuit breakers' })
+  @ApiOperation({ summary: 'Estado de disponibilidad del sistema' })
   getHealth() {
     const circuitBreakers = this.proxyService.getCircuitBreakerStatus();
-    const dlq = this.proxyService.getDeadLetterQueue();
+    const dlqCount = this.proxyService.getDeadLetterQueueCount();
+
+    const services: Record<string, 'up' | 'degraded'> = {};
+    for (const [name, cb] of Object.entries(circuitBreakers)) {
+      services[name] = cb.state === 'open' ? 'degraded' : 'up';
+    }
 
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      circuitBreakers,
-      deadLetterQueue: {
-        count: dlq.length,
-        recent: dlq.slice(-10),
-      },
+      services,
+      deadLetterQueue: { count: dlqCount },
     };
   }
 }

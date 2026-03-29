@@ -108,7 +108,7 @@ export class ProxyService implements OnModuleInit {
       } else {
         const remaining = Math.ceil((this.COOLDOWN_MS - elapsed) / 1000);
         throw new HttpException(
-          `${service} service circuit breaker OPEN — reintentar en ${remaining}s`,
+          `Service temporarily unavailable — retry in ${remaining}s`,
           HttpStatus.SERVICE_UNAVAILABLE,
         );
       }
@@ -165,6 +165,7 @@ export class ProxyService implements OnModuleInit {
     };
 
     if (this.deadLetterQueue.length >= this.DLQ_MAX_SIZE) {
+      this.logger.error(`DLQ at max capacity (${this.DLQ_MAX_SIZE}), dropping oldest entry to make room`);
       this.deadLetterQueue.shift();
     }
     this.deadLetterQueue.push(entry);
@@ -176,6 +177,10 @@ export class ProxyService implements OnModuleInit {
 
   getDeadLetterQueue(): DeadLetterEntry[] {
     return [...this.deadLetterQueue];
+  }
+
+  getDeadLetterQueueCount(): number {
+    return this.deadLetterQueue.length;
   }
 
   getCircuitBreakerStatus(): Record<string, CircuitBreakerState> {
@@ -218,7 +223,7 @@ export class ProxyService implements OnModuleInit {
       this.logger.error(`Kafka SSO error [${pattern}]: ${error.message}`);
       this.onFailure('sso', pattern, data, error.message);
       throw new HttpException(
-        'SSO service unavailable',
+        'Authentication service temporarily unavailable',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
@@ -256,7 +261,7 @@ export class ProxyService implements OnModuleInit {
       this.logger.error(`Kafka Banking error [${pattern}]: ${error.message}`);
       this.onFailure('banking', pattern, data, error.message);
       throw new HttpException(
-        'Banking service unavailable',
+        'Banking service temporarily unavailable',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
