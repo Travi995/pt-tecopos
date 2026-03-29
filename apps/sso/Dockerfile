@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+ENV NODE_OPTIONS=--max-old-space-size=512
 RUN npx nest build sso
 
 FROM node:20-alpine
