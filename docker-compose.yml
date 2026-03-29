@@ -1,5 +1,3 @@
-
-
 services:
   kafka:
     image: apache/kafka:latest
@@ -15,8 +13,14 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
     volumes:
-      - ./data/kafka:/var/lib/kafka/data
+      - ./data/kafka:/tmp/kafka-logs
 
   postgres-sso:
     image: postgres:16-alpine
@@ -26,6 +30,11 @@ services:
       POSTGRES_PASSWORD: ${SSO_DB_PASSWORD}
     ports:
       - "5433:5432"
+    healthcheck:
+      test: pg_isready -U ${SSO_DB_USER} -d ${SSO_DB_NAME}
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./data/postgres-sso:/var/lib/postgresql/data
 
@@ -37,6 +46,11 @@ services:
       POSTGRES_PASSWORD: ${BANKING_DB_PASSWORD}
     ports:
       - "5434:5432"
+    healthcheck:
+      test: pg_isready -U ${BANKING_DB_USER} -d ${BANKING_DB_NAME}
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./data/postgres-banking:/var/lib/postgresql/data
 
@@ -45,8 +59,10 @@ services:
       context: .
       dockerfile: apps/sso/Dockerfile
     depends_on:
-      - postgres-sso
-      - kafka
+      postgres-sso:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       DATABASE_HOST: postgres-sso
       DATABASE_PORT: 5432
@@ -62,8 +78,10 @@ services:
       context: .
       dockerfile: apps/banking/Dockerfile
     depends_on:
-      - postgres-banking
-      - kafka
+      postgres-banking:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       DATABASE_HOST: postgres-banking
       DATABASE_PORT: 5432
@@ -81,9 +99,12 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - sso
-      - banking
-      - kafka
+      sso:
+        condition: service_started
+      banking:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     environment:
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
