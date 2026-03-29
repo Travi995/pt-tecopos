@@ -133,6 +133,7 @@ services:
         condition: service_healthy
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       KAFKA_BROKERS: kafka:9092
       KAFKAJS_NO_PARTITIONER_WARNING: 1
     deploy:
