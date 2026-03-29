@@ -14,9 +14,14 @@ async function bootstrap() {
         client: {
           clientId: 'banking',
           brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
+          retry: {
+            initialRetryTime: 3000,
+            retries: 10,
+          },
         },
         consumer: {
           groupId: 'banking-consumer',
+          allowAutoTopicCreation: true,
         },
       },
     },

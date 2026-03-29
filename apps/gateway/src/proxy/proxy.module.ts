@@ -19,9 +19,14 @@ import { BankingProxyController } from './banking-proxy.controller';
             client: {
               clientId: 'gateway-sso',
               brokers: [config.get<string>('KAFKA_BROKERS', 'localhost:9092')],
+              retry: {
+                initialRetryTime: 3000,
+                retries: 10,
+              },
             },
             consumer: {
               groupId: 'gateway-sso-consumer',
+              allowAutoTopicCreation: true,
             },
           },
         }),
@@ -36,9 +41,14 @@ import { BankingProxyController } from './banking-proxy.controller';
             client: {
               clientId: 'gateway-banking',
               brokers: [config.get<string>('KAFKA_BROKERS', 'localhost:9092')],
+              retry: {
+                initialRetryTime: 3000,
+                retries: 10,
+              },
             },
             consumer: {
               groupId: 'gateway-banking-consumer',
+              allowAutoTopicCreation: true,
             },
           },
         }),

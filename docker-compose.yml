@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   kafka:
@@ -55,6 +55,7 @@ services:
       DATABASE_NAME: ${SSO_DB_NAME}
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
 
   banking:
     build:
@@ -71,6 +72,7 @@ services:
       DATABASE_NAME: ${BANKING_DB_NAME}
       WEBHOOK_URL: ${WEBHOOK_URL}
       KAFKA_BROKERS: kafka:9092
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
 
   gateway:
     build:
@@ -85,3 +87,4 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
