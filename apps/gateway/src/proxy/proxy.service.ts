@@ -1,66 +1,100 @@
-import { Injectable, HttpException, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { AxiosError } from 'axios';
-import { firstValueFrom } from 'rxjs';
-
-interface ProxyHeaders {
-  authorization?: string;
-}
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import { ClientKafka } from '@nestjs/microservices';
+import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 
 @Injectable()
-export class ProxyService {
+export class ProxyService implements OnModuleInit {
   private readonly logger = new Logger(ProxyService.name);
-  private ssoUrl: string;
-  private bankingUrl: string;
 
   constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
-  ) {
-    this.ssoUrl = this.configService.get<string>('SSO_URL', 'http://localhost:3001');
-    this.bankingUrl = this.configService.get<string>('BANKING_URL', 'http://localhost:3002');
+    @Inject('SSO_SERVICE') private readonly ssoClient: ClientKafka,
+    @Inject('BANKING_SERVICE') private readonly bankingClient: ClientKafka,
+  ) {}
+
+  async onModuleInit() {
+    const ssoTopics = [
+      'sso.auth.register',
+      'sso.auth.login',
+      'sso.auth.profile',
+    ];
+    const bankingTopics = [
+      'banking.accounts.findAll',
+      'banking.accounts.findOne',
+      'banking.operations.findByAccount',
+      'banking.operations.create',
+    ];
+
+    ssoTopics.forEach((topic) => this.ssoClient.subscribeToResponseOf(topic));
+    bankingTopics.forEach((topic) =>
+      this.bankingClient.subscribeToResponseOf(topic),
+    );
+
+    await this.ssoClient.connect();
+    await this.bankingClient.connect();
   }
 
-  async forwardToSso(method: string, path: string, data?: Record<string, unknown>, headers?: ProxyHeaders) {
+  async sendToSso(
+    pattern: string,
+    data: Record<string, unknown>,
+  ): Promise<unknown> {
     try {
-      const response = await firstValueFrom(
-        this.httpService.request({
-          method,
-          url: `${this.ssoUrl}/api/v1${path}`,
-          data,
-          headers: headers ? { authorization: headers.authorization } : undefined,
-        }),
+      const result = await firstValueFrom(
+        this.ssoClient.send(pattern, data).pipe(
+          timeout(10000),
+          catchError((err) => throwError(() => err)),
+        ),
       );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response) {
-        throw new HttpException(axiosError.response.data as Record<string, unknown>, axiosError.response.status);
+      if (result && typeof result === 'object' && 'error' in result) {
+        const errorResult = result as { error: string; statusCode: number };
+        throw new HttpException(
+          errorResult.error,
+          errorResult.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
-      this.logger.error(`Failed to forward request to SSO: ${axiosError.message}`);
-      throw error;
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Kafka SSO error [${pattern}]: ${error.message}`);
+      throw new HttpException(
+        'SSO service unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 
-  async forwardToBanking(method: string, path: string, data?: Record<string, unknown>, headers?: ProxyHeaders) {
+  async sendToBanking(
+    pattern: string,
+    data: Record<string, unknown>,
+  ): Promise<unknown> {
     try {
-      const response = await firstValueFrom(
-        this.httpService.request({
-          method,
-          url: `${this.bankingUrl}/api/v1${path}`,
-          data,
-          headers: headers ? { authorization: headers.authorization } : undefined,
-        }),
+      const result = await firstValueFrom(
+        this.bankingClient.send(pattern, data).pipe(
+          timeout(10000),
+          catchError((err) => throwError(() => err)),
+        ),
       );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response) {
-        throw new HttpException(axiosError.response.data as Record<string, unknown>, axiosError.response.status);
+      if (result && typeof result === 'object' && 'error' in result) {
+        const errorResult = result as { error: string; statusCode: number };
+        throw new HttpException(
+          errorResult.error,
+          errorResult.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
-      this.logger.error(`Failed to forward request to Banking: ${axiosError.message}`);
-      throw error;
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Kafka Banking error [${pattern}]: ${error.message}`);
+      throw new HttpException(
+        'Banking service unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 }

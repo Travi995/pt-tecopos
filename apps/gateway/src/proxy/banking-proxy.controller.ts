@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Param, Body, Req, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -25,7 +34,7 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'List all bank accounts' })
   @ApiResponse({ status: 200, description: 'List of accounts' })
   async findAll(@Req() req: ProxyRequest) {
-    return this.proxyService.forwardToBanking('GET', '/accounts', undefined, {
+    return this.proxyService.sendToBanking('banking.accounts.findAll', {
       authorization: req.headers.authorization,
     });
   }
@@ -34,8 +43,12 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'Get account by ID' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account details' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: ProxyRequest) {
-    return this.proxyService.forwardToBanking('GET', `/accounts/${id}`, undefined, {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: ProxyRequest,
+  ) {
+    return this.proxyService.sendToBanking('banking.accounts.findOne', {
+      id,
       authorization: req.headers.authorization,
     });
   }
@@ -44,12 +57,16 @@ export class BankingProxyController {
   @ApiOperation({ summary: 'List operations for an account' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'List of operations' })
-  async findOperations(@Param('id', ParseUUIDPipe) id: string, @Req() req: ProxyRequest) {
-    return this.proxyService.forwardToBanking(
-      'GET',
-      `/accounts/${id}/operations`,
-      undefined,
-      { authorization: req.headers.authorization },
+  async findOperations(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: ProxyRequest,
+  ) {
+    return this.proxyService.sendToBanking(
+      'banking.operations.findByAccount',
+      {
+        accountId: id,
+        authorization: req.headers.authorization,
+      },
     );
   }
 
@@ -63,11 +80,10 @@ export class BankingProxyController {
     @Body() body: CreateOperationDto,
     @Req() req: ProxyRequest,
   ) {
-    return this.proxyService.forwardToBanking(
-      'POST',
-      `/accounts/${id}/operations`,
-      body as unknown as Record<string, unknown>,
-      { authorization: req.headers.authorization },
-    );
+    return this.proxyService.sendToBanking('banking.operations.create', {
+      accountId: id,
+      ...(body as unknown as Record<string, unknown>),
+      authorization: req.headers.authorization,
+    });
   }
 }
