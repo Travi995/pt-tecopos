@@ -98,9 +98,25 @@ All secrets are managed via `.env` file (see `.env.example`). The `.env` file is
 - **Non-root containers:** Docker images run as `node` user
 - **No hardcoded secrets:** All credentials externalized to environment variables
 
-## Deployment
+## Deployment (Production)
 
-> **URL:** _To be added after deployment_
+Microservicios desplegados en **Hugging Face Spaces** con bases de datos en **Neon PostgreSQL**.
+
+### URLs de Producción
+
+| Servicio | URL |
+|----------|-----|
+| **Gateway (API)** | [https://travieso1231-pt-tecopos-gateway.hf.space/api/v1](https://travieso1231-pt-tecopos-gateway.hf.space/api/v1) |
+| **SSO** | [https://travieso1231-pt-tecopos-sso.hf.space/api/v1](https://travieso1231-pt-tecopos-sso.hf.space/api/v1) |
+| **Banking** | [https://travieso1231-pt-tecopos-banking.hf.space/api/v1](https://travieso1231-pt-tecopos-banking.hf.space/api/v1) |
+
+### Documentación Swagger (API Docs)
+
+| Servicio | URL |
+|----------|-----|
+| **Gateway** | [https://travieso1231-pt-tecopos-gateway.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-gateway.hf.space/api/v1/docs) |
+| **SSO** | [https://travieso1231-pt-tecopos-sso.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-sso.hf.space/api/v1/docs) |
+| **Banking** | [https://travieso1231-pt-tecopos-banking.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-banking.hf.space/api/v1/docs) |
 
 ## Project Structure
 
