@@ -36,8 +36,29 @@ export class ProxyService implements OnModuleInit {
       this.bankingClient.subscribeToResponseOf(topic),
     );
 
-    await this.ssoClient.connect();
-    await this.bankingClient.connect();
+    await this.connectWithRetry(this.ssoClient, 'SSO');
+    await this.connectWithRetry(this.bankingClient, 'Banking');
+  }
+
+  private async connectWithRetry(
+    client: ClientKafka,
+    name: string,
+    retries = 10,
+    delay = 3000,
+  ) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await client.connect();
+        this.logger.log(`${name} Kafka client connected`);
+        return;
+      } catch (error) {
+        this.logger.warn(
+          `${name} Kafka connect attempt ${i + 1}/${retries} failed: ${error.message}`,
+        );
+        if (i === retries - 1) throw error;
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
   }
 
   async sendToSso(
