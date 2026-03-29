@@ -1,9 +1,7 @@
 services:
   kafka:
     image: apache/kafka:latest
-    restart: always
-    ports:
-      - "9092:9092"
+    restart: on-failure
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -14,6 +12,7 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
     healthcheck:
       test: /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1
       interval: 5s
@@ -22,16 +21,19 @@ services:
       start_period: 15s
     volumes:
       - ./data/kafka:/tmp/kafka-logs
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.0'
 
   postgres-sso:
     image: postgres:16-alpine
-    restart: always
+    restart: on-failure
     environment:
       POSTGRES_DB: ${SSO_DB_NAME}
       POSTGRES_USER: ${SSO_DB_USER}
       POSTGRES_PASSWORD: ${SSO_DB_PASSWORD}
-    ports:
-      - "5433:5432"
     healthcheck:
       test: pg_isready -U ${SSO_DB_USER} -d ${SSO_DB_NAME}
       interval: 5s
@@ -39,16 +41,19 @@ services:
       retries: 5
     volumes:
       - ./data/postgres-sso:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.3'
 
   postgres-banking:
     image: postgres:16-alpine
-    restart: always
+    restart: on-failure
     environment:
       POSTGRES_DB: ${BANKING_DB_NAME}
       POSTGRES_USER: ${BANKING_DB_USER}
       POSTGRES_PASSWORD: ${BANKING_DB_PASSWORD}
-    ports:
-      - "5434:5432"
     healthcheck:
       test: pg_isready -U ${BANKING_DB_USER} -d ${BANKING_DB_NAME}
       interval: 5s
@@ -56,12 +61,17 @@ services:
       retries: 5
     volumes:
       - ./data/postgres-banking:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.3'
 
   sso:
     build:
       context: .
       dockerfile: apps/sso/Dockerfile
-    restart: always
+    restart: on-failure
     depends_on:
       postgres-sso:
         condition: service_healthy
@@ -76,12 +86,17 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
       KAFKAJS_NO_PARTITIONER_WARNING: 1
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
 
   banking:
     build:
       context: .
       dockerfile: apps/banking/Dockerfile
-    restart: always
+    restart: on-failure
     depends_on:
       postgres-banking:
         condition: service_healthy
@@ -96,12 +111,17 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL}
       KAFKA_BROKERS: kafka:9092
       KAFKAJS_NO_PARTITIONER_WARNING: 1
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
 
   gateway:
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
-    restart: always
+    restart: on-failure
     ports:
       - "3000:3000"
     depends_on:
@@ -115,3 +135,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
       KAFKAJS_NO_PARTITIONER_WARNING: 1
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
