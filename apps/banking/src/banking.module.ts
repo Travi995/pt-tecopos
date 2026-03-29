@@ -5,6 +5,7 @@ import { AccountsModule } from './accounts/accounts.module';
 import { OperationsModule } from './operations/operations.module';
 import { WebhookModule } from './webhooks/webhook.module';
 import { SeedModule } from './seed/seed.module';
+import { BankingKafkaController } from './banking-kafka.controller';
 
 @Module({
   imports: [
@@ -18,7 +19,10 @@ import { SeedModule } from './seed/seed.module';
         username: configService.get<string>('DATABASE_USERNAME', 'postgres'),
         password: configService.get<string>('DATABASE_PASSWORD', 'postgres'),
         database: configService.get<string>('DATABASE_NAME', 'banking'),
-        ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        ssl:
+          configService.get('DATABASE_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         autoLoadEntities: true,
         synchronize: configService.get('NODE_ENV') !== 'production',
       }),
@@ -28,5 +32,6 @@ import { SeedModule } from './seed/seed.module';
     WebhookModule,
     SeedModule,
   ],
+  controllers: [BankingKafkaController],
 })
 export class BankingModule {}

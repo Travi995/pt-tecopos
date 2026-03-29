@@ -18,6 +18,4 @@ COPY --from=builder /app/package.json ./
 
 USER node
 
-EXPOSE 3002
-
 CMD ["node", "dist/main.js"]

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Operation } from './entity/operation.entity';
 import { OperationsService } from './operations.service';
-import { OperationsController } from './operations.controller';
 import { AccountsModule } from '../accounts/accounts.module';
 import { WebhookModule } from '../webhooks/webhook.module';
 
@@ -12,7 +11,7 @@ import { WebhookModule } from '../webhooks/webhook.module';
     AccountsModule,
     WebhookModule,
   ],
-  controllers: [OperationsController],
   providers: [OperationsService],
+  exports: [OperationsService],
 })
 export class OperationsModule {}
