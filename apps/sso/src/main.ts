@@ -1,4 +1,5 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { SsoModule } from './sso.module';
 import { Logger } from '@nestjs/common';
@@ -26,6 +27,8 @@ async function bootstrap() {
       },
     },
   );
+
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   await app.listen();
   logger.log('SSO microservice listening on Kafka');
