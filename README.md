@@ -1,118 +1,290 @@
 # TECOPOS MVP - Banking Integration Platform
 
-## Architecture
+Plataforma de integración bancaria con arquitectura de microservicios comunicados via Apache Kafka.
+
+## Arquitectura
 
 ```
-[Client] → [Gateway :3000] ──[Kafka]──→ [SSO] (auth)
-                            ──[Kafka]──→ [Banking] (accounts + operations)
+                         ┌─────────────────┐
+                         │   Apache Kafka   │
+                         │   (KRaft mode)   │
+                         └───┬─────────┬───┘
+                             │         │
+┌────────┐    HTTP    ┌──────┴───┐     │
+│ Client ├───────────→│ Gateway  │     │
+│        │←───────────┤  :3000   │     │
+└────────┘            └──────┬───┘     │
+                             │         │
+              Kafka req/res  │         │  Kafka req/res
+                             │         │
+                     ┌───────┴──┐  ┌───┴────────┐
+                     │   SSO    │  │  Banking    │
+                     │ (auth)   │  │ (accounts)  │
+                     └───────┬──┘  └───┬────────┘
+                             │         │
+                     ┌───────┴──┐  ┌───┴────────┐
+                     │ Postgres │  │  Postgres   │
+                     │  (SSO)   │  │ (Banking)   │
+                     └──────────┘  └────────────┘
 ```
 
-Docker Compose: 6 services (`gateway`, `sso`, `banking`, `kafka`, `postgres-sso`, `postgres-banking`)
+### Servicios (Docker Compose)
 
-- **Gateway**: servidor HTTP (único punto de entrada) + productor Kafka
-- **SSO**: microservicio puro Kafka (sin HTTP) - autenticación
-- **Banking**: microservicio puro Kafka (sin HTTP) - cuentas y operaciones
-- **Kafka**: broker Apache Kafka en modo KRaft (sin Zookeeper)
+| Servicio | Rol | Protocolo |
+|----------|-----|-----------|
+| `gateway` | API Gateway, único punto de entrada HTTP | HTTP (puerto 3000) + Kafka producer |
+| `sso` | Autenticación (register, login, profile) | Kafka consumer (sin HTTP) |
+| `banking` | Cuentas bancarias y operaciones | Kafka consumer (sin HTTP) |
+| `kafka` | Broker de mensajería (KRaft, sin Zookeeper) | PLAINTEXT:9092 |
+| `postgres-sso` | Base de datos del servicio SSO | PostgreSQL 16 |
+| `postgres-banking` | Base de datos del servicio Banking | PostgreSQL 16 |
 
 ## Tech Stack
 
-- **NestJS** (monorepo)
-- **Apache Kafka** (transporte inter-servicios via `@nestjs/microservices` + `kafkajs`)
-- **PostgreSQL 16**
-- **TypeORM**
-- **JWT + bcrypt**
-- **@nestjs/throttler**
-- **@nestjs/swagger**
-- **Docker Compose**
+| Tecnología | Uso |
+|------------|-----|
+| NestJS 11 | Framework (monorepo) |
+| Apache Kafka | Transporte inter-servicios (`@nestjs/microservices` + `kafkajs`) |
+| PostgreSQL 16 | Base de datos (una por microservicio) |
+| TypeORM | ORM |
+| JWT + bcrypt | Autenticación y hashing de contraseñas |
+| @nestjs/throttler | Rate limiting (10 req/min por IP) |
+| @nestjs/swagger | Documentación API (solo Gateway) |
+| Docker Compose | Orquestación de contenedores |
 
-## Getting Started
+## Despliegue local
 
-### Prerequisites
+### Prerrequisitos
 
 - Docker & Docker Compose
 
-### Despliegue local (un solo comando)
+### Un solo comando
 
 ```bash
 docker compose up --build -d
 ```
 
-Espera ~30 segundos a que todos los servicios arranquen.
+Espera ~30 segundos a que Kafka, PostgreSQL y los 3 microservicios arranquen.
 
-**URL local:** [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs)
+### URL local
 
-Para ver los logs:
+- **API Base:** `http://localhost:3000/api/v1`
+- **Swagger (docs interactivos):** `http://localhost:3000/api/v1/docs`
+
+### Comandos útiles
 
 ```bash
+# Ver logs en tiempo real
 docker compose logs -f
-```
 
-Para apagar:
+# Ver logs de un servicio específico
+docker compose logs gateway -f
+docker compose logs sso -f
+docker compose logs banking -f
 
-```bash
+# Ver estado de los contenedores
+docker compose ps
+
+# Apagar todo
 docker compose down
+
+# Apagar y borrar volúmenes (reset completo)
+docker compose down -v
 ```
 
 ## API Endpoints
 
 Base URL: `http://localhost:3000/api/v1`
 
-| Method | Path | Description | Auth |
-|--------|------|-------------|------|
-| POST | `/api/v1/auth/register` | Register user | No |
-| POST | `/api/v1/auth/login` | Login, get JWT | No |
-| GET | `/api/v1/auth/profile` | Get profile | JWT |
-| GET | `/api/v1/accounts` | List accounts | JWT |
-| GET | `/api/v1/accounts/:id` | Get account | JWT |
-| GET | `/api/v1/accounts/:id/operations` | List operations | JWT |
-| POST | `/api/v1/accounts/:id/operations` | Create operation | JWT |
+### Autenticación
 
-## Swagger Documentation
+| Method | Path | Description | Auth | Body |
+|--------|------|-------------|------|------|
+| POST | `/auth/register` | Registrar usuario | No | `{ email, password, name }` |
+| POST | `/auth/login` | Login, obtener JWT | No | `{ email, password }` |
+| GET | `/auth/profile` | Obtener perfil del usuario | Bearer JWT | - |
 
-| Servicio | URL |
-|----------|-----|
-| Gateway | [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs) |
+### Cuentas y Operaciones
 
-> SSO y Banking son microservicios puros Kafka, no exponen HTTP ni Swagger.
+| Method | Path | Description | Auth | Body |
+|--------|------|-------------|------|------|
+| GET | `/accounts` | Listar todas las cuentas | Bearer JWT | - |
+| GET | `/accounts/:id` | Obtener cuenta por ID | Bearer JWT | - |
+| GET | `/accounts/:id/operations` | Listar operaciones de una cuenta | Bearer JWT | - |
+| POST | `/accounts/:id/operations` | Crear operación | Bearer JWT | `{ type, amount, description? }` |
 
-## Environment Variables
+### Ejemplos de uso (curl)
 
-Todas las variables se gestionan via `.env` (ver `.env.example`).
+```bash
+# Registrar usuario
+curl -X POST http://localhost:3000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123", "name": "John Doe"}'
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `JWT_SECRET` | JWT signing key | **Yes** |
-| `KAFKA_BROKERS` | Kafka broker address | No (default: `localhost:9092`) |
-| `DATABASE_HOST` | PostgreSQL host | No (default: `localhost`) |
-| `DATABASE_PORT` | PostgreSQL port | No (default: `5432`) |
-| `SSO_DB_USER` | SSO PostgreSQL user | For Docker Compose |
-| `SSO_DB_PASSWORD` | SSO PostgreSQL password | For Docker Compose |
-| `SSO_DB_NAME` | SSO database name | For Docker Compose |
-| `BANKING_DB_USER` | Banking PostgreSQL user | For Docker Compose |
-| `BANKING_DB_PASSWORD` | Banking PostgreSQL password | For Docker Compose |
-| `BANKING_DB_NAME` | Banking database name | For Docker Compose |
-| `WEBHOOK_URL` | Webhook notification URL | No (skipped if not set) |
+# Login (obtener token)
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+# Respuesta: { "access_token": "eyJhbGci..." }
 
-## Security
+# Ver perfil (con token)
+curl http://localhost:3000/api/v1/auth/profile \
+  -H "Authorization: Bearer <token>"
 
-- **Rate limiting:** 10 requests per minute per IP (`@nestjs/throttler`)
-- **JWT Bearer token** authentication with fail-fast validation
-- **Password hashing** with bcrypt (salt rounds: 10)
-- **Input validation:** UUID validation on path params, DTO validation on request bodies
-- **CORS** enabled on gateway
-- **Non-root containers:** Docker images run as `node` user
-- **No hardcoded secrets:** All credentials externalized to environment variables
-- **Kafka transport:** No HTTP entre microservicios, comunicación via Kafka request-response
+# Listar cuentas
+curl http://localhost:3000/api/v1/accounts \
+  -H "Authorization: Bearer <token>"
 
-## Project Structure
+# Crear operación (depósito)
+curl -X POST http://localhost:3000/api/v1/accounts/<account-id>/operations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"type": "DEPOSIT", "amount": 100.00, "description": "Depósito inicial"}'
+```
+
+## Modelos de datos
+
+### User (SSO)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| email | string | Único |
+| password | string | Hash bcrypt |
+| name | string | Nombre del usuario |
+| createdAt | timestamp | Fecha de creación |
+| updatedAt | timestamp | Última actualización |
+
+### Account (Banking)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| accountNumber | string | Número de cuenta (único) |
+| holderName | string | Nombre del titular |
+| currency | string | Moneda (default: USD) |
+| balance | decimal(12,2) | Saldo actual |
+| createdAt | timestamp | Fecha de creación |
+| updatedAt | timestamp | Última actualización |
+
+### Operation (Banking)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| accountId | UUID | FK a Account |
+| type | enum | `DEPOSIT`, `WITHDRAWAL`, `TRANSFER` |
+| amount | decimal(12,2) | Monto de la operación |
+| description | string | Descripción (opcional) |
+| date | timestamp | Fecha de la operación |
+| createdAt | timestamp | Fecha de creación |
+| updatedAt | timestamp | Última actualización |
+
+## Comunicación Kafka
+
+El Gateway actúa como productor Kafka (request-response). SSO y Banking son consumidores puros.
+
+### Topics (message patterns)
+
+| Topic | Servicio | Equivalente REST |
+|-------|----------|------------------|
+| `sso.auth.register` | SSO | POST /auth/register |
+| `sso.auth.login` | SSO | POST /auth/login |
+| `sso.auth.profile` | SSO | GET /auth/profile |
+| `banking.accounts.findAll` | Banking | GET /accounts |
+| `banking.accounts.findOne` | Banking | GET /accounts/:id |
+| `banking.operations.findByAccount` | Banking | GET /accounts/:id/operations |
+| `banking.operations.create` | Banking | POST /accounts/:id/operations |
+
+Cada topic tiene un reply topic automático (ej: `sso.auth.login.reply`) para el patrón request-response.
+
+## Variables de entorno
+
+Configuración via archivo `.env` (ver `.env.example`).
+
+| Variable | Descripción | Requerida | Default |
+|----------|-------------|-----------|---------|
+| `JWT_SECRET` | Clave para firmar JWT (min 32 chars) | **Sí** | - |
+| `KAFKA_BROKERS` | Dirección del broker Kafka | No | `localhost:9092` |
+| `CORS_ORIGIN` | Origen CORS permitido | No | `*` |
+| `DATABASE_HOST` | Host PostgreSQL | No | `localhost` |
+| `DATABASE_PORT` | Puerto PostgreSQL | No | `5432` |
+| `DATABASE_USERNAME` | Usuario PostgreSQL | No | `postgres` |
+| `DATABASE_PASSWORD` | Contraseña PostgreSQL | No | `postgres` |
+| `DATABASE_NAME` | Nombre de la base de datos | No | `sso` / `banking` |
+| `SSO_DB_USER` | Usuario PostgreSQL SSO (Docker) | Sí (Docker) | - |
+| `SSO_DB_PASSWORD` | Contraseña PostgreSQL SSO (Docker) | Sí (Docker) | - |
+| `SSO_DB_NAME` | Nombre BD SSO (Docker) | Sí (Docker) | - |
+| `BANKING_DB_USER` | Usuario PostgreSQL Banking (Docker) | Sí (Docker) | - |
+| `BANKING_DB_PASSWORD` | Contraseña PostgreSQL Banking (Docker) | Sí (Docker) | - |
+| `BANKING_DB_NAME` | Nombre BD Banking (Docker) | Sí (Docker) | - |
+| `WEBHOOK_URL` | URL para notificaciones de operaciones | No | - (se omite si no está) |
+
+## Seguridad
+
+- **Rate limiting:** 10 peticiones por minuto por IP (`@nestjs/throttler`)
+- **JWT Bearer token:** autenticación con validación fail-fast
+- **Password hashing:** bcrypt con 10 salt rounds
+- **Input validation:** validación de UUID en params, DTOs con `class-validator`
+- **CORS:** habilitado en Gateway (configurable via `CORS_ORIGIN`)
+- **Non-root containers:** imágenes Docker corren como usuario `node`
+- **No hardcoded secrets:** todas las credenciales en variables de entorno
+- **Kafka transport:** comunicación interna sin HTTP, via Kafka request-response
+- **Bases de datos aisladas:** cada microservicio tiene su propia PostgreSQL
+
+## Estructura del proyecto
 
 ```
 project/
 ├── apps/
-│   ├── gateway/     (port 3000) - API Gateway HTTP + Kafka producer
-│   ├── sso/         (Kafka consumer) - Authentication (JWT + bcrypt)
-│   └── banking/     (Kafka consumer) - Accounts & operations + webhooks
-├── docker-compose.yml
+│   ├── gateway/                        # API Gateway (HTTP + Kafka producer)
+│   │   ├── src/
+│   │   │   ├── main.ts                 # Servidor HTTP :3000
+│   │   │   ├── app.module.ts
+│   │   │   ├── guards/
+│   │   │   │   └── jwt-auth.guard.ts   # Validación JWT en requests HTTP
+│   │   │   └── proxy/
+│   │   │       ├── proxy.module.ts     # ClientsModule Kafka (SSO + Banking)
+│   │   │       ├── proxy.service.ts    # Envío de mensajes Kafka con retry
+│   │   │       ├── auth-proxy.controller.ts
+│   │   │       ├── banking-proxy.controller.ts
+│   │   │       └── dto/               # DTOs con validación
+│   │   └── Dockerfile
+│   │
+│   ├── sso/                            # Microservicio SSO (Kafka consumer)
+│   │   ├── src/
+│   │   │   ├── main.ts                 # createMicroservice con Transport.KAFKA
+│   │   │   ├── sso.module.ts
+│   │   │   ├── auth/
+│   │   │   │   ├── auth-kafka.controller.ts  # @MessagePattern handlers
+│   │   │   │   ├── auth.service.ts           # Lógica de negocio
+│   │   │   │   └── auth.module.ts
+│   │   │   └── users/
+│   │   │       ├── users.service.ts
+│   │   │       └── entity/user.entity.ts
+│   │   └── Dockerfile
+│   │
+│   └── banking/                        # Microservicio Banking (Kafka consumer)
+│       ├── src/
+│       │   ├── main.ts                 # createMicroservice con Transport.KAFKA
+│       │   ├── banking.module.ts
+│       │   ├── banking-kafka.controller.ts   # @MessagePattern handlers
+│       │   ├── accounts/
+│       │   │   ├── accounts.service.ts
+│       │   │   └── entity/account.entity.ts
+│       │   ├── operations/
+│       │   │   ├── operations.service.ts
+│       │   │   ├── dto/create-operation.dto.ts
+│       │   │   └── entity/operation.entity.ts
+│       │   ├── webhooks/
+│       │   │   └── webhook.service.ts  # Notificaciones HTTP externas
+│       │   └── seed/
+│       │       └── seed.service.ts     # Datos de prueba
+│       └── Dockerfile
+│
+├── docker-compose.yml                  # 6 servicios: kafka, 2x postgres, gateway, sso, banking
 ├── .env.example
-└── nest-cli.json
+├── nest-cli.json
+├── package.json
+└── tsconfig.json
 ```
