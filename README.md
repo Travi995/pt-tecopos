@@ -3,15 +3,21 @@
 ## Architecture
 
 ```
-[Client] → [Gateway :3000] → [SSO :3001] (auth)
-                            → [Banking :3002] (accounts + operations)
+[Client] → [Gateway :3000] ──[Kafka]──→ [SSO] (auth)
+                            ──[Kafka]──→ [Banking] (accounts + operations)
 ```
 
-Docker Compose: 5 services (`gateway`, `sso`, `banking`, `postgres-sso`, `postgres-banking`)
+Docker Compose: 6 services (`gateway`, `sso`, `banking`, `kafka`, `postgres-sso`, `postgres-banking`)
+
+- **Gateway**: servidor HTTP (único punto de entrada) + productor Kafka
+- **SSO**: microservicio puro Kafka (sin HTTP) - autenticación
+- **Banking**: microservicio puro Kafka (sin HTTP) - cuentas y operaciones
+- **Kafka**: broker Apache Kafka en modo KRaft (sin Zookeeper)
 
 ## Tech Stack
 
 - **NestJS** (monorepo)
+- **Apache Kafka** (transporte inter-servicios via `@nestjs/microservices` + `kafkajs`)
 - **PostgreSQL 16**
 - **TypeORM**
 - **JWT + bcrypt**
@@ -23,25 +29,28 @@ Docker Compose: 5 services (`gateway`, `sso`, `banking`, `postgres-sso`, `postgr
 
 ### Prerequisites
 
-- Node.js 20+
 - Docker & Docker Compose
 
-### Run with Docker (recommended)
+### Despliegue local (un solo comando)
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-### Run locally
+Espera ~30 segundos a que todos los servicios arranquen.
 
-1. Start PostgreSQL instances
-2. Install dependencies and start each service:
+**URL local:** [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs)
+
+Para ver los logs:
 
 ```bash
-npm install
-npm run start:dev gateway
-npm run start:dev sso
-npm run start:dev banking
+docker compose logs -f
+```
+
+Para apagar:
+
+```bash
+docker compose down
 ```
 
 ## API Endpoints
@@ -60,26 +69,22 @@ Base URL: `http://localhost:3000/api/v1`
 
 ## Swagger Documentation
 
-| Service | URL |
-|---------|-----|
+| Servicio | URL |
+|----------|-----|
 | Gateway | [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs) |
-| SSO | [http://localhost:3001/api/v1/docs](http://localhost:3001/api/v1/docs) |
-| Banking | [http://localhost:3002/api/v1/docs](http://localhost:3002/api/v1/docs) |
+
+> SSO y Banking son microservicios puros Kafka, no exponen HTTP ni Swagger.
 
 ## Environment Variables
 
-All secrets are managed via `.env` file (see `.env.example`). The `.env` file is excluded from version control via `.gitignore`.
+Todas las variables se gestionan via `.env` (ver `.env.example`).
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `JWT_SECRET` | JWT signing key | **Yes** (app fails to start without it) |
-| `SSO_URL` | SSO service URL | No (default: `http://localhost:3001`) |
-| `BANKING_URL` | Banking service URL | No (default: `http://localhost:3002`) |
+| `JWT_SECRET` | JWT signing key | **Yes** |
+| `KAFKA_BROKERS` | Kafka broker address | No (default: `localhost:9092`) |
 | `DATABASE_HOST` | PostgreSQL host | No (default: `localhost`) |
 | `DATABASE_PORT` | PostgreSQL port | No (default: `5432`) |
-| `DATABASE_USERNAME` | DB username | No (default: `postgres`) |
-| `DATABASE_PASSWORD` | DB password | No (default: `postgres`) |
-| `DATABASE_NAME` | DB name | No (default: `sso` / `banking`) |
 | `SSO_DB_USER` | SSO PostgreSQL user | For Docker Compose |
 | `SSO_DB_PASSWORD` | SSO PostgreSQL password | For Docker Compose |
 | `SSO_DB_NAME` | SSO database name | For Docker Compose |
@@ -97,35 +102,16 @@ All secrets are managed via `.env` file (see `.env.example`). The `.env` file is
 - **CORS** enabled on gateway
 - **Non-root containers:** Docker images run as `node` user
 - **No hardcoded secrets:** All credentials externalized to environment variables
-
-## Deployment (Production)
-
-Microservicios desplegados en **Hugging Face Spaces** con bases de datos en **Neon PostgreSQL**.
-
-### URLs de Producción
-
-| Servicio | URL |
-|----------|-----|
-| **Gateway (API)** | [https://travieso1231-pt-tecopos-gateway.hf.space/api/v1](https://travieso1231-pt-tecopos-gateway.hf.space/api/v1) |
-| **SSO** | [https://travieso1231-pt-tecopos-sso.hf.space/api/v1](https://travieso1231-pt-tecopos-sso.hf.space/api/v1) |
-| **Banking** | [https://travieso1231-pt-tecopos-banking.hf.space/api/v1](https://travieso1231-pt-tecopos-banking.hf.space/api/v1) |
-
-### Documentación Swagger (API Docs)
-
-| Servicio | URL |
-|----------|-----|
-| **Gateway** | [https://travieso1231-pt-tecopos-gateway.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-gateway.hf.space/api/v1/docs) |
-| **SSO** | [https://travieso1231-pt-tecopos-sso.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-sso.hf.space/api/v1/docs) |
-| **Banking** | [https://travieso1231-pt-tecopos-banking.hf.space/api/v1/docs](https://travieso1231-pt-tecopos-banking.hf.space/api/v1/docs) |
+- **Kafka transport:** No HTTP entre microservicios, comunicación via Kafka request-response
 
 ## Project Structure
 
 ```
-tecopos-mvp/
+project/
 ├── apps/
-│   ├── gateway/     (port 3000) - API Gateway with rate limiting
-│   ├── sso/         (port 3001) - Authentication (JWT + bcrypt)
-│   └── banking/     (port 3002) - Accounts & operations + webhooks
+│   ├── gateway/     (port 3000) - API Gateway HTTP + Kafka producer
+│   ├── sso/         (Kafka consumer) - Authentication (JWT + bcrypt)
+│   └── banking/     (Kafka consumer) - Accounts & operations + webhooks
 ├── docker-compose.yml
 ├── .env.example
 └── nest-cli.json
