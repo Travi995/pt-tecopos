@@ -1,6 +1,7 @@
 services:
   kafka:
     image: apache/kafka:latest
+    restart: always
     ports:
       - "9092:9092"
     environment:
@@ -24,6 +25,7 @@ services:
 
   postgres-sso:
     image: postgres:16-alpine
+    restart: always
     environment:
       POSTGRES_DB: ${SSO_DB_NAME}
       POSTGRES_USER: ${SSO_DB_USER}
@@ -40,6 +42,7 @@ services:
 
   postgres-banking:
     image: postgres:16-alpine
+    restart: always
     environment:
       POSTGRES_DB: ${BANKING_DB_NAME}
       POSTGRES_USER: ${BANKING_DB_USER}
@@ -58,6 +61,7 @@ services:
     build:
       context: .
       dockerfile: apps/sso/Dockerfile
+    restart: always
     depends_on:
       postgres-sso:
         condition: service_healthy
@@ -77,6 +81,7 @@ services:
     build:
       context: .
       dockerfile: apps/banking/Dockerfile
+    restart: always
     depends_on:
       postgres-banking:
         condition: service_healthy
@@ -96,6 +101,7 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
+    restart: always
     ports:
       - "3000:3000"
     depends_on:

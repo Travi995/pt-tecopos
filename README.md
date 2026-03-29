@@ -113,6 +113,12 @@ Base URL: `http://localhost:3000/api/v1`
 | GET | `/accounts/:id/operations` | Listar operaciones de una cuenta | Bearer JWT | - |
 | POST | `/accounts/:id/operations` | Crear operación | Bearer JWT | `{ type, amount, description? }` |
 
+### Sistema
+
+| Method | Path | Description | Auth | Body |
+|--------|------|-------------|------|------|
+| GET | `/health` | Estado del sistema, circuit breakers y DLQ | No | - |
+
 ### Ejemplos de uso (curl)
 
 ```bash
@@ -220,6 +226,54 @@ Configuración via archivo `.env` (ver `.env.example`).
 | `BANKING_DB_NAME` | Nombre BD Banking (Docker) | Sí (Docker) | - |
 | `WEBHOOK_URL` | URL para notificaciones de operaciones | No | - (se omite si no está) |
 
+## Resiliencia
+
+### Circuit Breaker
+
+El Gateway implementa un circuit breaker por cada microservicio (SSO y Banking):
+
+| Estado | Comportamiento |
+|--------|---------------|
+| **CLOSED** | Funcionamiento normal, las peticiones se envían al microservicio |
+| **OPEN** | Después de 5 fallos consecutivos, se rechazan peticiones inmediatamente (503) durante 30s |
+| **HALF-OPEN** | Después del cooldown, se permite 1 petición de prueba. Si tiene éxito → CLOSED, si falla → OPEN |
+
+### Dead Letter Queue (DLQ)
+
+Los mensajes Kafka que fallan repetidamente se almacenan en una cola en memoria (máx. 1000 entradas) con:
+- Pattern del mensaje
+- Datos enviados
+- Error que causó el fallo
+- Timestamp
+- Servicio destino
+
+### Auto-restart
+
+Todos los contenedores tienen `restart: always` en Docker Compose. Si un microservicio crashea, Docker lo reinicia automáticamente.
+
+### Endpoint de salud
+
+```bash
+# Ver estado de circuit breakers y DLQ
+curl http://localhost:3000/api/v1/health
+```
+
+Respuesta:
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "circuitBreakers": {
+    "sso": { "failures": 0, "lastFailure": 0, "state": "closed" },
+    "banking": { "failures": 0, "lastFailure": 0, "state": "closed" }
+  },
+  "deadLetterQueue": {
+    "count": 0,
+    "recent": []
+  }
+}
+```
+
 ## Seguridad
 
 - **Rate limiting:** 10 peticiones por minuto por IP (`@nestjs/throttler`)
@@ -245,7 +299,8 @@ project/
 │   │   │   │   └── jwt-auth.guard.ts   # Validación JWT en requests HTTP
 │   │   │   └── proxy/
 │   │   │       ├── proxy.module.ts     # ClientsModule Kafka (SSO + Banking)
-│   │   │       ├── proxy.service.ts    # Envío de mensajes Kafka con retry
+│   │   │       ├── proxy.service.ts    # Envío Kafka + circuit breaker + DLQ
+│   │   │       ├── health.controller.ts  # Estado del sistema y circuit breakers
 │   │   │       ├── auth-proxy.controller.ts
 │   │   │       ├── banking-proxy.controller.ts
 │   │   │       └── dto/               # DTOs con validación

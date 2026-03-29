@@ -4,6 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ProxyService } from './proxy.service';
 import { AuthProxyController } from './auth-proxy.controller';
 import { BankingProxyController } from './banking-proxy.controller';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { BankingProxyController } from './banking-proxy.controller';
       },
     ]),
   ],
-  controllers: [AuthProxyController, BankingProxyController],
+  controllers: [AuthProxyController, BankingProxyController, HealthController],
   providers: [ProxyService],
 })
 export class ProxyModule {}
